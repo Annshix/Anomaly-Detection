@@ -11,7 +11,7 @@ class DataProcessing:
         self.df = pd.read_csv(params.file_path)
         self.feature = [[], []]
         self.written = written
-        self.__time_trans()
+        self.temp_data = self.__time_trans()
 
     rng = pd.date_range(params.start_date, params.end_date, freq='D')
     time_to_f = pd.Series(np.random.randn(len(rng)), index=rng)
@@ -37,7 +37,7 @@ class DataProcessing:
         ans = self.df.drop(self.df.columns[[3, 4, 5]], axis=1)\
             .assign(date=pd.Series(self.feature[0]))\
             .assign(duedate=pd.Series(self.feature[1]))
-        ans.to_csv(params.re_file_path)
+        return ans
 
     @staticmethod
     def name_to_index(obj):
@@ -52,19 +52,18 @@ class DataProcessing:
         return map_set
 
     def clean_data(self):
-        dt = pd.read_csv(params.re_file_path)
-        c = dt.sort_values(by='CardNum' and 'ItemCode').T.values[3]
-        i = dt.sort_values(by='CardNum' and 'ItemCode').T.values[4]
+        c = self.temp_data.sort_values(by='CardNum' and 'ItemCode').T.values[3]
+        i = self.temp_data.sort_values(by='CardNum' and 'ItemCode').T.values[4]
         card_dict = self.name_to_index(c)
         item_dict = self.name_to_index(i)
         card_num = list(map(lambda x: card_dict[x], c))
         item_code = list(map(lambda x: item_dict[x], i))
 
-        ans = dt.assign(card_num=pd.Series(card_num))\
+        self.temp_data.assign(card_num=pd.Series(card_num))\
             .assign(item_code=pd.Series(item_code))\
-            .drop(dt.columns[[2, 3]], axis=1)
-
-        return ans
+            .drop(self.temp_data.columns[[0, 2, 3, 4]], axis=1)\
+            .sort_values(by='card_num' and 'item_code')\
+            .to_csv(params.re_file_path)
 
 
 def main():
