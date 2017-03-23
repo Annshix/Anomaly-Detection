@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import random
 import params
+import sys
 
 dt = pd.read_csv(params.re_file_path)
 rows, cols = dt.shape
@@ -49,20 +50,48 @@ optimizer = RMSprop(lr=0.01)
 model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
 
-def sample():
-    for iteration in range(1, 100):
+def sample(preds, temperature):
+    preds = np.asarray(preds).astype('float64')
+    preds = np.log(preds) / temperature
+    exp = np.exp(preds)
+    preds = exp / np.sum(exp)
+    probas = np.random.multinomial(1, preds, 1)
+    return np.argmax(probas)
+
+
+for iteration in range(1, 100):
+    print()
+    print('Iteration', iteration)
+    model.fit(X, y, batch_size=128, nb_epoch=1)
+
+    start_index = random.randint(0, len(data_x_train) - window_size)
+
+    for diversity in [0.2, 0.5, 1.0, 1.2]:
         print()
-        print('Iteration', iteration)
-        model.fit(X, y, batch_size=128, nb_epoch=1)
+        print('diversity: ', diversity)
 
-        for diversity in [0.2, 0.5, 1.0, 1.2]:
-            print()
-            print('diversity: ', diversity)
+        generated = []
+        examp = val[start_index: start_index + x_size]
+        generated.append(examp)
 
-            generated = []
+        for i in range(400):
+            x = np.zeros((1, x_size, 5))
+            for j, item in enumerate(examp):
+                x[0, j] = examp[i]
 
-            for i in range(400):
-                x = np.zeros
+            preds = model.predict(x, verbose=0)[0]
+            next_index = sample(preds, diversity)
+            next_res =
+
+            generated.append(next_res)
+            examp = examp[y_size:] + next_res
+
+            sys.stdout.write(examp)
+            sys.stdout.flush()
+        print()
+
+
+
 
 
 
