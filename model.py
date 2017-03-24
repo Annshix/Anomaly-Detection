@@ -12,19 +12,19 @@ import sys
 
 dt = pd.read_csv(params.re_file_path)
 rows, cols = dt.shape
-val = dt.values
+val = dt.values[:, 1:6]
 
 window_size = 100
 ratio = 0.7
 step = 20
-x_size = window_size*ratio
-y_size = window_size*(1-ratio)
+x_size = int(window_size*ratio)
+y_size = window_size - x_size
 
 data_x_train = []
 data_y_train = []
 
 print('Sequences creating......')
-for i in range(0, rows-window_size, step):
+for i in range(0, rows - window_size, step):
     data_x_train.append(val[i:i + x_size])
     data_y_train.append(val[i + x_size:i+window_size])
 
@@ -50,13 +50,13 @@ optimizer = RMSprop(lr=0.01)
 model.compile(loss='categorical_crossentropy', optimizer=optimizer)
 
 
-def sample(preds, temperature):
-    preds = np.asarray(preds).astype('float64')
-    preds = np.log(preds) / temperature
-    exp = np.exp(preds)
-    preds = exp / np.sum(exp)
-    probas = np.random.multinomial(1, preds, 1)
-    return np.argmax(probas)
+def sample(predicts, temperature):
+    predicts = np.asarray(predicts).astype('float64')
+    predicts = np.log(predicts) / temperature
+    exp = np.exp(predicts)
+    predicts = exp / np.sum(exp)
+    alpha = np.random.multinomial(1, predicts)
+    return np.argmax(alpha)
 
 
 for iteration in range(1, 100):
@@ -80,8 +80,11 @@ for iteration in range(1, 100):
                 x[0, j] = examp[i]
 
             preds = model.predict(x, verbose=0)[0]
+            print('predictions: ', preds)
             next_index = sample(preds, diversity)
-            next_res =
+            next_res = []
+            for index in next_index:
+                next_res.append(val[index])
 
             generated.append(next_res)
             examp = examp[y_size:] + next_res
