@@ -7,7 +7,7 @@ import params
 
 class DataProcessing:
 
-    def __init__(self, written):
+    def __init__(self, written=0):
         self.df = pd.read_csv(params.file_path)
         self.feature = [[], []]
         self.written = written
@@ -51,6 +51,32 @@ class DataProcessing:
             prev = item
         return map_set
 
+    @staticmethod
+    def item_classify(item_list, index):
+        user_boundary = [100, 1000, 2000, 5000]
+        item_boundary = [10, 100, 300, 1000]
+        if index == 'user':
+            boundary = user_boundary
+        else:
+            boundary = item_boundary
+        map_set = dict()
+        ans = []
+        for item in item_list:
+            map_set.setdefault(item, 0)
+            map_set[item] += 1
+        for item in item_list:
+            if map_set[item] < boundary[0]:
+                ans.append(1)
+            elif map_set[item] < boundary[1]:
+                ans.append(2)
+            elif map_set[item] < boundary[2]:
+                ans.append(3)
+            elif map_set[item] < boundary[3]:
+                ans.append(4)
+            else:
+                ans.append(5)
+        return ans
+
     def clean_data(self):
         c = self.temp_data.sort_values(by='CardNum' and 'ItemCode').T.values[3]
         i = self.temp_data.sort_values(by='CardNum' and 'ItemCode').T.values[4]
@@ -58,12 +84,18 @@ class DataProcessing:
         item_dict = self.name_to_index(i)
         card_num = list(map(lambda x: card_dict[x], c))
         item_code = list(map(lambda x: item_dict[x], i))
+        user_level = self.item_classify(card_num, 'user')
+        item_level = self.item_classify(item_code, 'item')
 
-        self.temp_data.assign(card_num=pd.Series(card_num))\
+        self.temp_data.sort_values(by='CardNum' and 'ItemCode')\
+            .assign(card_num=pd.Series(card_num))\
             .assign(item_code=pd.Series(item_code))\
+            .assign(user_level=pd.Series(user_level))\
+            .assign(item_level=pd.Series(item_level))\
             .drop(self.temp_data.columns[[0, 2, 3, 4]], axis=1)\
-            .sort_values(by='card_num' and 'item_code')\
             .to_csv(params.re_file_path)
+
+        return
 
 
 def main():
