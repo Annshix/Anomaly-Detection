@@ -8,10 +8,10 @@ import params
 class DataProcessing:
 
     def __init__(self, written=0):
-        self.df = pd.read_csv(params.file_path)
-        self.feature = [[], []]
-        self.written = written
-        self.temp_data = self.__time_trans()
+            self.df = pd.read_csv(params.file_path)
+            self.feature = [[], []]
+            self.written = written
+            self.temp_data = self.__time_trans()
 
     rng = pd.date_range(params.start_date, params.end_date, freq='D')
     time_to_f = pd.Series(np.random.randn(len(rng)), index=rng)
@@ -32,12 +32,48 @@ class DataProcessing:
         if self.written:
             return
         for row in self.df.values:
-            ft = map(lambda x: self.time_transfer(x), row[3:4])
-            map(lambda x: self.feature[x].append(ft[x]), [0, 1])
+            self.feature[0].append(self.time_transfer(row[3]))
+            self.feature[1].append(self.time_transfer(row[4]))
         ans = self.df.drop(self.df.columns[[3, 4, 5]], axis=1)\
             .assign(date=pd.Series(self.feature[0]))\
             .assign(duedate=pd.Series(self.feature[1]))
+        print("Wub,End transferring time...")
         return ans
+
+    @staticmethod
+    def pair_generate(d):
+        dt = d.sort_values(by='date').values
+        pattern_pair = {}
+        data_fin = []
+        pair_num = 0
+        for row in dt:
+            user = row[2]
+            item = row[3]
+            pattern_pair.setdefault((user, item), [])
+            pattern_pair[(user, item)].append(row)
+        print("Lub, Begin generating pairs...")
+        for key, values in pattern_pair.items():
+            l = len(values)
+            if l == 1:
+                # behave = values[0]
+                # duration = 0
+                # print([behave[0], behave[0]])
+                # event = [behave[0], behave[0]] + behave[2:5] + [duration]
+                # data_fin.append(event)
+                continue
+            else:
+                i, j = 0, 1
+                while j < l:
+                    behave1 = values[i]
+                    behave2 = values[j]
+                    duration = behave2[4] - behave1[4] + 0.5
+                    event = [behave2[0], behave1[0], duration, behave2[4], behave1[6], behave1[7]]
+                    data_fin.append(event)
+                    pair_num += 1
+                    i += 1
+                    j += 1
+        print(pair_num)
+        return data_fin
 
     @staticmethod
     def name_to_index(obj):
@@ -78,30 +114,32 @@ class DataProcessing:
         return ans
 
     def clean_data(self):
-        c = self.temp_data.sort_values(by='CardNum' and 'ItemCode').T.values[3]
-        i = self.temp_data.sort_values(by='CardNum' and 'ItemCode').T.values[4]
-        card_dict = self.name_to_index(c)
-        item_dict = self.name_to_index(i)
-        card_num = list(map(lambda x: card_dict[x], c))
-        item_code = list(map(lambda x: item_dict[x], i))
-        user_level = self.item_classify(card_num, 'user')
-        item_level = self.item_classify(item_code, 'item')
+        c = self.temp_data.T.values[2]
+        i = self.temp_data.T.values[3]
+        # print('transfer to index...')
+        # # card_dict = self.name_to_index(c)
+        # # item_dict = self.name_to_index(i)
+        # print('end index transfer...')
+        # card_num = list(map(lambda x: card_dict[x], c))
+        # item_code = list(map(lambda x: item_dict[x], i))
+        print('LubLub, start claasifying......')
+        user_level = self.item_classify(c, 'user')
+        print('user classified......')
+        item_level = self.item_classify(i, 'item')
+        print("end classifying...")
 
-        self.temp_data.sort_values(by='CardNum' and 'ItemCode')\
-            .assign(card_num=pd.Series(card_num))\
-            .assign(item_code=pd.Series(item_code))\
-            .assign(user_level=pd.Series(user_level))\
-            .assign(item_level=pd.Series(item_level))\
-            .drop(self.temp_data.columns[[0, 2, 3, 4]], axis=1)\
-            .to_csv(params.re_file_path)
-
+        temp = self.temp_data.assign(user_level=pd.Series(user_level))\
+            .assign(item_level=pd.Series(item_level))
+        paired_data = self.pair_generate(temp)
+        pd.DataFrame(np.array(paired_data), columns=['pattern1', 'pattern2', 'duration', 'date',
+                                                     'user_level', 'item_level'])\
+            .to_csv('pair.csv')
         return
 
 
 def main():
     m = DataProcessing()
     m.clean_data()
-
 
 if __name__ == '__main__':
     main()
